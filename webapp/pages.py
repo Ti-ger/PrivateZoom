@@ -162,7 +162,7 @@ def get_abstracted_data():
 
     # apply abstractions
     try:
-        df, activity_orders = process_log_for_d3js_abstractions(
+        df, axis_orders = process_log_for_d3js_abstractions(
             df,
             requested_cluster,
             requested_sp_zooms,
@@ -219,7 +219,7 @@ def get_abstracted_data():
     for event in data:
         event[ACTIVITY_ORDER_COLUMN] = {
             column: order_by_value.get(event.get(column))
-            for column, order_by_value in activity_orders.items()
+            for column, order_by_value in axis_orders.items()
         }
     return jsonify(data)
 

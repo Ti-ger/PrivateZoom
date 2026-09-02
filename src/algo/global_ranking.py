@@ -27,6 +27,20 @@ from src.utils.data_processing import create_dict_from_integer, filter_tuplekeys
 
 logger = logging.getLogger(__name__)
 
+
+def timestamp_order_for_column(
+        df, value_col, reltime_col="time:relative:seconds"):
+    """Return value -> rank ordered by mean relative timestamp."""
+    mean_times = df.groupby(value_col, sort=False)[reltime_col].mean()
+    ordered_values = sorted(
+        mean_times.items(),
+        key=lambda item: (item[1], str(item[0])),
+    )
+    return {
+        value: rank
+        for rank, (value, _) in enumerate(ordered_values, start=1)
+    }
+
 def global_ranking_of_eventdata(
         df, method = "df_realtime_mean", 
         indexswitch=True, rank_col="ranks",

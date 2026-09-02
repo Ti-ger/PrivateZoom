@@ -23,7 +23,10 @@ def discover_footprints(df):
 
 sys.modules["pm4py"] = SimpleNamespace(discover_footprints=discover_footprints)
 
-from src.algo.global_ranking import global_ranking_method_df_relativetime
+from src.algo.global_ranking import (
+    global_ranking_method_df_relativetime,
+    timestamp_order_for_column,
+)
 
 
 class GlobalRankingTests(unittest.TestCase):
@@ -48,6 +51,23 @@ class GlobalRankingTests(unittest.TestCase):
             1: "register request",
             2: "examine thoroughly",
             3: "pay compensation",
+        })
+
+    def test_resource_column_is_ordered_by_mean_relative_timestamp(self):
+        frame = pd.DataFrame({
+            "org:resource": ["late", "early", "late", "middle"],
+            "time:relative:seconds": [30, 0, 10, 8],
+        })
+
+        actual = timestamp_order_for_column(
+            frame,
+            value_col="org:resource",
+        )
+
+        self.assertEqual(actual, {
+            "early": 1,
+            "middle": 2,
+            "late": 3,
         })
 
 

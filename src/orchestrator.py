@@ -31,6 +31,7 @@ from src.algo.global_ranking import (
     delete_columns,
     global_ranking_method_df_relativetime,
     global_ranking_of_eventdata,
+    timestamp_order_for_column,
 )
 from src.clustering import general_clusterer, specific_clusterer
 from src.utils.data_processing import rename_cols_for_d3csv, convert_timecols_to_string
@@ -43,28 +44,53 @@ FILEPATH =  project_root / "data" / "working_data"
 ACTIVITY_ORDER_COLUMN = "__activity_order"
 
 
-def timestamp_activity_orders(df, relative_times):
-    """Return timestamp-based ranks for every activity-typed column."""
-    activity_columns = [
+def timestamp_axis_orders(df, relative_times):
+    """Return timestamp-based ranks for every categorical axis column."""
+    categorical_types = {
+        attribute_extractor.ATTRIBUTE_TYPES.ACTIVITY,
+        attribute_extractor.ATTRIBUTE_TYPES.RESOURCE,
+        attribute_extractor.ATTRIBUTE_TYPES.STRING,
+    }
+    known_categorical_columns = {
+        "activity",
+        "case:concept:name",
+        "concept:name",
+        "org:resource",
+        "resource",
+    }
+    axis_columns = [
         column
         for column in df.columns
-        if column.casefold() in {"concept:name", "activity"}
+        if column.casefold() in known_categorical_columns
         or attribute_extractor.event_attribute_type_mapping.get(column)
-        == attribute_extractor.ATTRIBUTE_TYPES.ACTIVITY
+        in categorical_types
     ]
     orders = {}
 
-    for activity_column in activity_columns:
+    for axis_column in axis_columns:
         ordering_df = df.copy()
         ordering_df["__activity_relative_seconds"] = relative_times
-        rank_to_activity = global_ranking_method_df_relativetime(
-            ordering_df,
-            act_col=activity_column,
-            reltime_col="__activity_relative_seconds",
+
+        attribute_type = attribute_extractor.event_attribute_type_mapping.get(axis_column)
+        is_activity = (
+            axis_column.casefold() in {"concept:name", "activity"}
+            or attribute_type == attribute_extractor.ATTRIBUTE_TYPES.ACTIVITY
         )
-        orders[activity_column] = {
-            activity: rank for rank, activity in rank_to_activity.items()
-        }
+        if is_activity:
+            rank_to_value = global_ranking_method_df_relativetime(
+                ordering_df,
+                act_col=axis_column,
+                reltime_col="__activity_relative_seconds",
+            )
+            orders[axis_column] = {
+                value: rank for rank, value in rank_to_value.items()
+            }
+        else:
+            orders[axis_column] = timestamp_order_for_column(
+                ordering_df,
+                value_col=axis_column,
+                reltime_col="__activity_relative_seconds",
+            )
 
     return orders
 
@@ -160,7 +186,7 @@ def process_log_for_d3js_abstractions(df, requested_clusters, sp_zooms):
 
 
     logger.debug(df_proc.head())
-    activity_orders = timestamp_activity_orders(
+    axis_orders = timestamp_axis_orders(
         df_proc,
         relative_times_for_activity_order,
     )
@@ -169,4 +195,4 @@ def process_log_for_d3js_abstractions(df, requested_clusters, sp_zooms):
     logger.debug(df_proc.head())
     df_proc = convert_timecols_to_string(df_proc) # Convert Timedelta to string (JSON cannot handle Timedelta or Datetime)
     df_proc = df_proc.fillna("nan") # In case some values are NaN, replace them with "nan" string for JSON compatibility
-    return df_proc, activity_orders
+    return df_proc, axis_orders
