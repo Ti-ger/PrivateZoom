@@ -68,7 +68,14 @@ def global_ranking_method_df_relativetime(
     activity_group_list = activity_group.keys().to_list()
 
     # calculate footprint matrix
-    footprints = pm4py.discover_footprints(df)
+    # PM4Py's public discover_footprints API does not accept an activity-key
+    # override in every supported version. Project a custom activity column
+    # onto the canonical XES key for footprint discovery instead.
+    footprint_df = df
+    if act_col != "concept:name":
+        footprint_df = df.copy()
+        footprint_df["concept:name"] = footprint_df[act_col]
+    footprints = pm4py.discover_footprints(footprint_df)
 
     # divide activites into sets
     start_activities = set(footprints["start_activities"])

@@ -37,7 +37,7 @@
 			<date key="time:timestamp" value="2010-12-30T15:06:00.000+01:00"/>
 			<string key="Activity" value="examine casually"/>
 			<string key="Resource" value="Mike"/>
-			<string key="Costs" value="400"/>
+			<string key="Costs" value="200"/>
 		</event>
 		<event>
 			<string key="concept:name" value="check ticket"/>
@@ -157,7 +157,7 @@
 			<date key="time:timestamp" value="2010-12-31T10:06:00.000+01:00"/>
 			<string key="Activity" value="examine thoroughly"/>
 			<string key="Resource" value="Sue"/>
-			<string key="Costs" value="400"/>
+			<string key="Costs" value="250"/>
 		</event>
 		<event>
 			<string key="concept:name" value="check ticket"/>
@@ -201,7 +201,7 @@
 			<date key="time:timestamp" value="2011-01-06T16:06:00.000+01:00"/>
 			<string key="Activity" value="examine casually"/>
 			<string key="Resource" value="Ellen"/>
-			<string key="Costs" value="400"/>
+			<string key="Costs" value="220"/>
 		</event>
 		<event>
 			<string key="concept:name" value="check ticket"/>
@@ -245,7 +245,7 @@
 			<date key="time:timestamp" value="2011-01-07T10:16:00.000+01:00"/>
 			<string key="Activity" value="examine casually"/>
 			<string key="Resource" value="Mike"/>
-			<string key="Costs" value="400"/>
+			<string key="Costs" value="190"/>
 		</event>
 		<event>
 			<string key="concept:name" value="check ticket"/>
@@ -285,7 +285,7 @@
 			<date key="time:timestamp" value="2011-01-16T15:50:00.000+01:00"/>
 			<string key="Activity" value="examine casually"/>
 			<string key="Resource" value="Mike"/>
-			<string key="Costs" value="400"/>
+			<string key="Costs" value="210"/>
 		</event>
 		<event>
 			<string key="concept:name" value="decide"/>
@@ -309,7 +309,7 @@
 			<date key="time:timestamp" value="2011-01-21T09:06:00.000+01:00"/>
 			<string key="Activity" value="examine casually"/>
 			<string key="Resource" value="Sue"/>
-			<string key="Costs" value="400"/>
+			<string key="Costs" value="200"/>
 		</event>
 		<event>
 			<string key="concept:name" value="check ticket"/>

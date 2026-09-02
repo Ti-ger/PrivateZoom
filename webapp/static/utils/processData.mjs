@@ -69,6 +69,36 @@ function getUniqueValues(d, accessor, reverse = true) {
     }
 };
 
+function getUniqueValuesByOrder(d, valueAccessor, orderAccessor, descending = false) {
+    const orderByValue = new Map();
+
+    for (const item of d) {
+        const value = valueAccessor(item);
+        const order = Number(orderAccessor(item));
+        if (!Number.isFinite(order)) continue;
+
+        const aggregate = orderByValue.get(value) ?? { total: 0, count: 0 };
+        aggregate.total += order;
+        aggregate.count += 1;
+        orderByValue.set(value, aggregate);
+    }
+
+    const values = [...new Set(d.map(valueAccessor))];
+    const compareAscending = (a, b) => {
+        const aggregateA = orderByValue.get(a);
+        const aggregateB = orderByValue.get(b);
+        const orderA = aggregateA ? aggregateA.total / aggregateA.count : Number.POSITIVE_INFINITY;
+        const orderB = aggregateB ? aggregateB.total / aggregateB.count : Number.POSITIVE_INFINITY;
+
+        if (orderA !== orderB) return orderA - orderB;
+        return String(a).localeCompare(String(b));
+    };
+
+    return values.sort((a, b) => descending
+        ? -compareAscending(a, b)
+        : compareAscending(a, b));
+};
+
 function sortStringArrayByStartNumber (arr, descending = false) {
     const sortedArr = arr.slice().sort((a, b) => {
         const [numA, strA = ""] = a.split(/_(.*)/s);
@@ -85,4 +115,10 @@ function sortStringArrayByStartNumber (arr, descending = false) {
     return descending ? sortedArr.reverse() : sortedArr;
 };
 
-export { convertLogtoGraph, deriveDFRelations, getUniqueValues, sortStringArrayByStartNumber };
+export {
+    convertLogtoGraph,
+    deriveDFRelations,
+    getUniqueValues,
+    getUniqueValuesByOrder,
+    sortStringArrayByStartNumber
+};

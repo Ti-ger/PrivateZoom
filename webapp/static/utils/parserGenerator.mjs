@@ -16,6 +16,7 @@ const buildAccessors = (schema) => {
       fn = (d) => d[key];
     }
     fn.type = type;
+    fn.attribute = key;
     accessors[key] = fn;
   }
 

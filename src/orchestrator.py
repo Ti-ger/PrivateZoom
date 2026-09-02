@@ -26,7 +26,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.algo.global_ranking import global_ranking_of_eventdata, delete_columns
+from src.analysis import attribute_extractor
+from src.algo.global_ranking import (
+    delete_columns,
+    global_ranking_method_df_relativetime,
+    global_ranking_of_eventdata,
+)
 from src.clustering import general_clusterer, specific_clusterer
 from src.utils.data_processing import rename_cols_for_d3csv, convert_timecols_to_string
 from src.utils.data_processing import simplifyLog, relativeTimestamps
@@ -35,6 +40,33 @@ logger = logging.getLogger(__name__)
 
 project_root = Path(__file__).resolve().parent.parent
 FILEPATH =  project_root / "data" / "working_data"
+ACTIVITY_ORDER_COLUMN = "__activity_order"
+
+
+def timestamp_activity_orders(df, relative_times):
+    """Return timestamp-based ranks for every activity-typed column."""
+    activity_columns = [
+        column
+        for column in df.columns
+        if column.casefold() in {"concept:name", "activity"}
+        or attribute_extractor.event_attribute_type_mapping.get(column)
+        == attribute_extractor.ATTRIBUTE_TYPES.ACTIVITY
+    ]
+    orders = {}
+
+    for activity_column in activity_columns:
+        ordering_df = df.copy()
+        ordering_df["__activity_relative_seconds"] = relative_times
+        rank_to_activity = global_ranking_method_df_relativetime(
+            ordering_df,
+            act_col=activity_column,
+            reltime_col="__activity_relative_seconds",
+        )
+        orders[activity_column] = {
+            activity: rank for rank, activity in rank_to_activity.items()
+        }
+
+    return orders
 
 def process_log_for_d3js(df):
     """
@@ -58,6 +90,9 @@ def process_log_for_d3js_abstractions(df, requested_clusters, sp_zooms):
     # Process data
     df_proc = simplifyLog(df_proc)
     df_proc = relativeTimestamps(df_proc)
+    # Keep the unabstracted relative times solely for calculating the visual
+    # activity order after all requested activity abstractions are applied.
+    relative_times_for_activity_order = df_proc["time:relative:seconds"].copy()
     df_proc, _ = global_ranking_of_eventdata(df_proc)
     df_proc = delete_columns(df_proc)
 
@@ -125,9 +160,13 @@ def process_log_for_d3js_abstractions(df, requested_clusters, sp_zooms):
 
 
     logger.debug(df_proc.head())
+    activity_orders = timestamp_activity_orders(
+        df_proc,
+        relative_times_for_activity_order,
+    )
     #df_proc = rename_cols_for_d3csv(df_proc)
     logger.debug("nach renaming")
     logger.debug(df_proc.head())
     df_proc = convert_timecols_to_string(df_proc) # Convert Timedelta to string (JSON cannot handle Timedelta or Datetime)
     df_proc = df_proc.fillna("nan") # In case some values are NaN, replace them with "nan" string for JSON compatibility
-    return df_proc
+    return df_proc, activity_orders

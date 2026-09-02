@@ -1,6 +1,6 @@
 [
   {
-    "col_name": "concept:name",
+    "col_name": "Activity",
     "abstractions": {
       "level1": {
         "hierarchy": {

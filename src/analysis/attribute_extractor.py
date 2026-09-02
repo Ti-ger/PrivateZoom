@@ -62,18 +62,16 @@ def extract_attributes(file_path):
 def extract_attribute_type_mapping():
     # Match based on attribute name
     for attr in event_attributes_types.keys():
-        match attr:
+        match attr.casefold():
             case "time:timestamp":
                 event_attribute_type_mapping.update({attr: ATTRIBUTE_TYPES.TIME})
             case "time:relative:seconds":
                 event_attribute_type_mapping.update({attr: ATTRIBUTE_TYPES.RELATIVE_TIME})
             case "org:resource":
                 event_attribute_type_mapping.update({attr: ATTRIBUTE_TYPES.RESOURCE})
-            case "concept:name":
+            case "concept:name" | "concept:name:ranked" | "activity":
                 event_attribute_type_mapping.update({attr: ATTRIBUTE_TYPES.ACTIVITY})
-            case "concept:name:ranked":
-                event_attribute_type_mapping.update({attr: ATTRIBUTE_TYPES.ACTIVITY})
-            case "Costs":
+            case "costs":
                 event_attribute_type_mapping.update({attr: ATTRIBUTE_TYPES.NUMERICAL})
             case _:
                 pass

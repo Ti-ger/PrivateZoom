@@ -33,6 +33,14 @@ pip install -r requirements/requirements.txt
 ```
 python -m venv [namevenv] 
 ```
+2. Setting the Privacy-Thresholds:
+```
+export K_EVENT=2
+export K_TRACE=1
+export K_EDGE=2
+export L_DIV=1
+export ENFORCE_PRIVACY=True
+```
 2. Execute the program  with `flask --app webapp run` (optional: add `--port 8000` and/or  `--debug`)
 3. Run the program over the URL `http://127.0.0.1:5000/` (adapt port number `5000` if necessary)
 

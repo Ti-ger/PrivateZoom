@@ -38,7 +38,7 @@ from src.analysis.privacy import max_zoom
 from src.analysis.privacy.privacy_checker import delete_trace, check_metrics
 from src.clustering import general_clusterer, numerical_clusterer
 from src.clustering.specific_clusterer import CycleDetectedException
-from src.orchestrator import process_log_for_d3js_abstractions
+from src.orchestrator import ACTIVITY_ORDER_COLUMN, process_log_for_d3js_abstractions
 from src.utils.data_exporting import export_event_log_custom
 from src.utils.data_importing import load_event_log_from_tempfile
 from src.utils.data_processing import simplifyLog, relativeTimestamps
@@ -162,7 +162,11 @@ def get_abstracted_data():
 
     # apply abstractions
     try:
-        df = process_log_for_d3js_abstractions(df, requested_cluster, requested_sp_zooms)
+        df, activity_orders = process_log_for_d3js_abstractions(
+            df,
+            requested_cluster,
+            requested_sp_zooms,
+        )
     except CycleDetectedException as e:
         return jsonify({
             "error": {
@@ -209,6 +213,14 @@ def get_abstracted_data():
         data = super_df.to_dict(orient='records')
     else:
         data = df.to_dict(orient='records')
+
+    # This is visualization metadata only. Add it after exporting, privacy
+    # checks, and super-graph construction so it cannot affect their results.
+    for event in data:
+        event[ACTIVITY_ORDER_COLUMN] = {
+            column: order_by_value.get(event.get(column))
+            for column, order_by_value in activity_orders.items()
+        }
     return jsonify(data)
 
 @bp.route("/api/available_abstractions")

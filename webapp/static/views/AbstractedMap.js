@@ -1,4 +1,4 @@
-import {convertLogtoGraph, getUniqueValues} from "../utils/processData.mjs";
+import {convertLogtoGraph, getUniqueValues, getUniqueValuesByOrder} from "../utils/processData.mjs";
 import {actAccessor, caseAccessor, idAccessor, nodes, parseDate, timeAccessor} from "../utils/parsers.mjs";
 import {SCALE} from "../layout/scales.mjs";
 import {dimensions} from "../layout/chartDimensions.mjs";
@@ -29,8 +29,20 @@ export function ABSTRACTEDMAP(csvdata, x_accessor=timeAccessor, y_accessor=actAc
     const NAN_SLOT_LABEL = "NaN";
     const NAN_SLOT_PADDING = 24;
 
-    let activities = getUniqueValues(nodes(data), actAccessor);
-    let y_values = getUniqueValues(nodes(data), y_accessor, false);
+    const activityOrderAccessor = (accessor) => (d) => {
+        const orderMetadata = d["__activity_order"];
+        if (orderMetadata && typeof orderMetadata === "object") {
+            return orderMetadata[accessor?.attribute];
+        }
+        return accessor?.attribute === "concept:name" ? orderMetadata : undefined;
+    };
+    const hasTimestampActivityOrder = (accessor) => nodes(data).some((d) =>
+        Number.isFinite(Number(activityOrderAccessor(accessor)(d)))
+    );
+    const categoricalValues = (accessor, vertical = false) => hasTimestampActivityOrder(accessor)
+        ? getUniqueValuesByOrder(nodes(data), accessor, activityOrderAccessor(accessor), vertical)
+        : getUniqueValues(nodes(data), accessor, false);
+    let y_values = categoricalValues(y_accessor, true);
     console.log("Extent of dates:", d3.extent(nodes(data), timeAccessor));
     let xScale;
     let xValueToPixel;
@@ -64,12 +76,18 @@ export function ABSTRACTEDMAP(csvdata, x_accessor=timeAccessor, y_accessor=actAc
                 xValueToPixel = (value) => xScale(+value);
             }
         } else {
-            xScale = SCALE.categories(getUniqueValues(nodes(data), x_accessor, false), dimensions, { vertical: false });
+            xScale = SCALE.categories(categoricalValues(x_accessor), dimensions, {
+                vertical: false,
+                sort: !hasTimestampActivityOrder(x_accessor)
+            });
             xValueToPixel = (value) => xScale(value);
         }
     } else {
         console.log("Using categorical scale for x-axis");
-        xScale = SCALE.categories(getUniqueValues(nodes(data), x_accessor, false), dimensions, { vertical: false });
+        xScale = SCALE.categories(categoricalValues(x_accessor), dimensions, {
+            vertical: false,
+            sort: !hasTimestampActivityOrder(x_accessor)
+        });
         xValueToPixel = (value) => xScale(value);
     }
     let yScale;
@@ -100,12 +118,16 @@ export function ABSTRACTEDMAP(csvdata, x_accessor=timeAccessor, y_accessor=actAc
                 yValueToPixel = (value) => yScale(+value);
             }
         } else {
-            yScale = SCALE.categories(y_values, dimensions);
+            yScale = SCALE.categories(y_values, dimensions, {
+                sort: !hasTimestampActivityOrder(y_accessor)
+            });
             yValueToPixel = (value) => yScale(value);
         }
     } else {
         console.log("Using categories scale for y-axis, as standard");
-        yScale = SCALE.categories(y_values, dimensions);
+        yScale = SCALE.categories(y_values, dimensions, {
+            sort: !hasTimestampActivityOrder(y_accessor)
+        });
         yValueToPixel = (value) => yScale(value);
     }
 
