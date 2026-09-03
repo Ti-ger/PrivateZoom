@@ -69,6 +69,25 @@ function getUniqueValues(d, accessor, reverse = true) {
     }
 };
 
+function getUniqueColumnValues(d, columnName) {
+    return [...new Set(
+        d
+            .map((item) => item[columnName])
+            .filter((value) => value !== null && value !== undefined && value !== "nan")
+    )].sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+};
+
+function getNextAbstractionIndex(possibleAbstractions, selectedAbstractions) {
+    if (possibleAbstractions.length === 0) return -1;
+
+    const currentIndex = possibleAbstractions.findIndex((abstraction) =>
+        selectedAbstractions.includes(abstraction)
+    );
+    return currentIndex < 0
+        ? 0
+        : Math.min(currentIndex + 1, possibleAbstractions.length - 1);
+};
+
 function getUniqueValuesByOrder(d, valueAccessor, orderAccessor, descending = false) {
     const orderByValue = new Map();
 
@@ -118,6 +137,8 @@ function sortStringArrayByStartNumber (arr, descending = false) {
 export {
     convertLogtoGraph,
     deriveDFRelations,
+    getNextAbstractionIndex,
+    getUniqueColumnValues,
     getUniqueValues,
     getUniqueValuesByOrder,
     sortStringArrayByStartNumber
