@@ -1,4 +1,3 @@
-import copy
 import logging
 from collections import defaultdict
 
@@ -13,14 +12,38 @@ class CycleDetectedException(Exception):
 
 
 def build_mask(df, filter_source_column, filter_attribute):
-    filter_func = lambda x : str(x) == filter_attribute
-    if isinstance(df[filter_source_column][0], pd.Timestamp):
-        filter_value = pd.to_datetime(filter_attribute, utc=True)
-        df_copy = copy.deepcopy(df)
-        mask = pd.to_datetime(df_copy[filter_source_column], utc=True) == filter_value
-        return mask.tolist()
-    mask = df[filter_source_column].apply(filter_func)
-    return mask.tolist()
+    """Build a mask from a filter value received from the HTML select.
+
+    Select values are always submitted as strings. XES attributes, however,
+    may be restored by PM4Py as numbers or timestamps. Compare using the
+    source column's dtype so values such as ``"400"`` also match ``400.0``.
+    """
+    if filter_source_column not in df.columns:
+        logger.warning("Cannot filter on missing column %s", filter_source_column)
+        return [False] * len(df)
+
+    source = df[filter_source_column]
+    if source.empty:
+        return []
+
+    if pd.api.types.is_datetime64_any_dtype(source):
+        filter_value = pd.to_datetime(filter_attribute, utc=True, errors="coerce")
+        if pd.isna(filter_value):
+            return [False] * len(source)
+        mask = pd.to_datetime(source, utc=True, errors="coerce") == filter_value
+        return mask.fillna(False).tolist()
+
+    if pd.api.types.is_numeric_dtype(source):
+        filter_value = pd.to_numeric(filter_attribute, errors="coerce")
+        if pd.isna(filter_value):
+            return [False] * len(source)
+        mask = pd.to_numeric(source, errors="coerce") == filter_value
+        return mask.fillna(False).tolist()
+
+    filter_value = str(filter_attribute)
+    return source.apply(
+        lambda value: False if pd.isna(value) else str(value) == filter_value
+    ).tolist()
 
 
 def build_dependency_graph(abstractions):
