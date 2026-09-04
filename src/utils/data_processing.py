@@ -78,13 +78,13 @@ def simplifyLog(df, lifecycle_activities=False,
 
     # LOG FILTERING
     # keep only k amount cases in the log
-    total_num_variants = len(pm4py.get_variants(df))
     if filter_cases > 0:
         case_list = df[case_col].unique()[0:filter_cases]
         df = pm4py.filter_event_attribute_values(df, case_col, case_list, level="case", retain=True).copy()
     elif filter_variants_k > 0:
         df = pm4py.filter_variants_top_k(df, filter_variants_k).copy()
     elif filter_variants_per > 0:
+        total_num_variants = len(pm4py.get_variants(df))
         filter_variants_k = math.ceil(filter_variants_per*total_num_variants)
         df = pm4py.filter_variants_top_k(df, filter_variants_k).copy()
 

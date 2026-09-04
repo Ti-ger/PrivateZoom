@@ -38,7 +38,11 @@ class AbstractClusterer(ABC):
         abstractions_to_apply.append(self.std_abstraction_object)
 
         abstractions_to_apply.sort(key=lambda x: x.ranking)
-        df_unabstracted = copy.deepcopy(df)
+        source_columns = list(dict.fromkeys(
+            abstraction.source_col for abstraction in abstractions_to_apply
+            if abstraction.source_col in df.columns
+        ))
+        df_unabstracted = df[source_columns].copy(deep=True)
         for abstraction_obj in abstractions_to_apply:
             if abstraction_obj.mask_filter_attribute is not None:
                 sp_mask = specific_clusterer.build_mask(df, abstraction_obj.mask_source_col, abstraction_obj.mask_filter_attribute)
@@ -46,7 +50,8 @@ class AbstractClusterer(ABC):
             self.calculate_masks()
 
             if abstraction_obj.source_col in df_unabstracted.columns and abstraction_obj.target_col in df.columns:
-                df.loc[abstraction_obj.mask, abstraction_obj.target_col] = df_unabstracted.loc[abstraction_obj.mask, abstraction_obj.source_col].apply(lambda x: abstraction_obj.apply_abstraction(copy.deepcopy(x)))
+                values = df_unabstracted.loc[abstraction_obj.mask, abstraction_obj.source_col].apply(lambda x: abstraction_obj.apply_abstraction(copy.deepcopy(x)))
+                df.loc[abstraction_obj.mask, abstraction_obj.target_col] = values
 
                 # Apply on global max_zoom_df
                 # Apply only if the ranking value for the entry to be abstracted is lower than the ranking of the abstraction_object
@@ -61,9 +66,9 @@ class AbstractClusterer(ABC):
                 update_mask.iloc[mask] = comparison
                 idx = update_mask.to_numpy()
 
-                new_values = df_unabstracted.loc[idx, abstraction_obj.source_col].apply(
-                    lambda x: abstraction_obj.apply_abstraction(copy.deepcopy(x))
-                )
+                # These events were already transformed above. Reuse the exact
+                # results for privacy history rather than transforming them twice.
+                new_values = values.iloc[comparison]
 
                 max_zoom_df.loc[idx, abstraction_obj.target_col] = new_values
                 max_zoom_df.loc[idx, rank_col] = abstraction_obj.ranking
@@ -78,16 +83,14 @@ class AbstractClusterer(ABC):
         if len(self.sp_abstraction_objects) == 0:
             return
         self.sp_abstraction_objects.sort(key=lambda x: x.ranking, reverse=True)
-        mask_len = len(self.std_abstraction_object.mask)
-        for i in range(mask_len):
-            set_mask = False
-            for sp_abstraction in self.sp_abstraction_objects:
-                if set_mask:
-                    sp_abstraction.mask[i] = False
-                elif sp_abstraction.mask[i]:
-                    set_mask = True
-            if set_mask:
-                self.std_abstraction_object.mask[i] = False
+        claimed = np.zeros(len(self.std_abstraction_object.mask), dtype=bool)
+        for abstraction in self.sp_abstraction_objects:
+            mask = np.asarray(abstraction.mask, dtype=bool) & ~claimed
+            abstraction.mask = mask.tolist()
+            claimed |= mask
+        self.std_abstraction_object.mask = (
+            np.asarray(self.std_abstraction_object.mask, dtype=bool) & ~claimed
+        ).tolist()
 
     def add_specific_abstraction(self, abstraction):
         self.sp_abstraction_objects.append(abstraction)

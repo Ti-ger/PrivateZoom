@@ -1,5 +1,6 @@
 from abc import ABC
 from collections import defaultdict
+import numpy as np
 
 
 class AbstractAbstraction(ABC):
@@ -29,5 +30,12 @@ class AbstractAbstraction(ABC):
         self.mask_filter_attribute = mask_filter_attribute
 
     def get_l_div_map(self):
-        # list instead of set for json serialization, maybe put in serializer
-        return {key : list(values) for key, values in self.l_div_map.items()}
+        # JSON's default serializer is never called for dictionary keys.
+        # Normalize NumPy scalars here, including numerical class boundaries.
+        def native_scalar(value):
+            return value.item() if isinstance(value, np.generic) else value
+
+        return {
+            native_scalar(key): [native_scalar(value) for value in values]
+            for key, values in self.l_div_map.items()
+        }

@@ -40,7 +40,10 @@ from src.clustering import general_clusterer, numerical_clusterer
 from src.clustering.specific_clusterer import CycleDetectedException
 from src.orchestrator import ACTIVITY_ORDER_COLUMN, process_log_for_d3js_abstractions
 from src.utils.data_exporting import export_event_log_custom
-from src.utils.data_importing import load_event_log_from_tempfile
+from src.utils.data_importing import (
+    load_cached_event_log, load_event_log_from_tempfile, load_xes_event_log,
+    event_log_to_dataframe,
+)
 from src.utils.data_processing import simplifyLog, relativeTimestamps
 
 # App directory
@@ -109,15 +112,18 @@ def upload_data():
         # preprocess for injecting the artificial attributes (relative_timestamp, ranked_activities)
         # then the attribute extractor see these attributes too
         general_clusterer.reset_abstractions()
-        df = load_event_log_from_tempfile(tmp_path)
+        df = load_cached_event_log(f"{FILEPATH}/persistent_log.xes")
         df = simplifyLog(df)
         df = relativeTimestamps(df)
         df, _ = global_ranking_of_eventdata(df)
         export_event_log_custom(df, tmp_path)
-        max_zoom.init_max_zoom_df(load_event_log_from_tempfile(tmp_path))
+        processed_log = load_xes_event_log(tmp_path)
 
         attribute_extractor.reset_attribute_mapping()
-        attribute_extractor.extract_attributes(tmp_path)
+        attribute_extractor.extract_attributes(tmp_path, log=processed_log)
+        # Conversion mutates events by adding trace attributes. Extract the
+        # attribute schema first so case metadata does not become zoomable.
+        max_zoom.init_max_zoom_df(event_log_to_dataframe(processed_log))
         attribute_extractor.extract_attribute_type_mapping()
         attribute_extractor.write_to_file()
 
@@ -145,6 +151,7 @@ def get_abstracted_data():
         cluster_obj.reset_specific_abstractions() # build requested specific abstractions everytime new
 
     requested_cluster = []
+    requested_columns = set()
     for requested_abstraction in requested_abstractions:
         col_name = COlUMN_ABSTRACTION_MAPPING[requested_abstraction]
         if col_name is None:
@@ -153,9 +160,18 @@ def get_abstracted_data():
         cluster_obj = ABSTRACTIONS_OBJECTS[col_name]
         cluster_obj.set_abstraction(requested_abstraction)
         requested_cluster.append(cluster_obj)
+        requested_columns.add(col_name)
+
+    # concept:name is hidden when Activity is available, but it must still be
+    # abstracted to preserve the previous response and privacy behaviour.
+    visible_attributes = attribute_extractor.get_ui_attribute_mapping()
+    if "concept:name" not in visible_attributes and "concept:name" not in requested_columns:
+        if (cluster_obj := ABSTRACTIONS_OBJECTS.get("concept:name")) is not None:
+            cluster_obj.set_abstraction(None)
+            requested_cluster.append(cluster_obj)
 
     # Load the non-abstracted log from the temporary file created during upload
-    df = load_event_log_from_tempfile(f"{FILEPATH}/persistent_log.xes")
+    df = load_cached_event_log(f"{FILEPATH}/persistent_log.xes")
     logger.debug("Loaded persistent log ")
     logger.debug(len(df))
     logger.debug(df.head())
@@ -178,10 +194,9 @@ def get_abstracted_data():
     max_zoom.export_max_zoom_df() # write the current max_zoom_df to the disk
 
     # export the abstracted log to a csv and a xes file
-    df_copy = df.copy()
     if config.get("EXPORT_ABSTRACTED_LOG", False):
         try:
-            export_event_log_custom(df_copy, f"{FILEPATH}/volatile_working_xes.xes")
+            export_event_log_custom(df.copy(), f"{FILEPATH}/volatile_working_xes.xes")
         except Exception as e:
             logger.error(f"Error exporting event log: {e}")
             raise RuntimeError(f"Error exporting event log: {e}")
@@ -227,7 +242,12 @@ def get_abstracted_data():
 def get_available_abstractions():
     ABSTRACTIONS_OBJECTS, COlUMN_ABSTRACTION_MAPPING = general_clusterer.get_abstractions() # build_abstractions
     logger.info(f"Available abstractions {COlUMN_ABSTRACTION_MAPPING}")
-    abstraction_keys = {attr :  list(ABSTRACTIONS_OBJECTS[attr].abstractions.keys()) for attr in ABSTRACTIONS_OBJECTS.keys()}
+    visible_attributes = attribute_extractor.get_ui_attribute_mapping()
+    abstraction_keys = {
+        attr: list(clusterer.abstractions.keys())
+        for attr, clusterer in ABSTRACTIONS_OBJECTS.items()
+        if attr in visible_attributes
+    }
     return jsonify(abstraction_keys)
 
 @bp.route("/api/available_abstractions/<col_name>")
@@ -247,6 +267,9 @@ def get_available_abstractions_for_column(col_name):
 def get_available_attributes():
     with open(f"{FILEPATH}/attributes.json", mode='r') as fp:
         attributes = json.load(fp)
+        event_attributes = attributes.get("eventAttributes", {})
+        if "Activity" in event_attributes:
+            event_attributes.pop("concept:name", None)
         return jsonify(attributes)
 
 @bp.route("/api/attribute_types")

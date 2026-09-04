@@ -1,6 +1,5 @@
-import sys
 import unittest
-from types import SimpleNamespace
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -21,8 +20,6 @@ def discover_footprints(df):
     }
 
 
-sys.modules["pm4py"] = SimpleNamespace(discover_footprints=discover_footprints)
-
 from src.algo.global_ranking import (
     global_ranking_method_df_relativetime,
     timestamp_order_for_column,
@@ -41,10 +38,12 @@ class GlobalRankingTests(unittest.TestCase):
             "time:relative:seconds": [30, 10, 0],
         })
 
-        actual = global_ranking_method_df_relativetime(
-            frame,
-            act_col="Activity",
-        )
+        with patch('src.algo.global_ranking.pm4py.discover_footprints',
+                   side_effect=discover_footprints):
+            actual = global_ranking_method_df_relativetime(
+                frame,
+                act_col="Activity",
+            )
 
         self.assertEqual(captured["activities"], frame["Activity"].tolist())
         self.assertEqual(actual, {

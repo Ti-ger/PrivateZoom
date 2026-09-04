@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
+from numbers import Number
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
 
@@ -33,12 +33,19 @@ def build_mask(df, filter_source_column, filter_attribute):
         mask = pd.to_datetime(source, utc=True, errors="coerce") == filter_value
         return mask.fillna(False).tolist()
 
-    if pd.api.types.is_numeric_dtype(source):
+    # Numerical abstractions can write float class boundaries into a column
+    # that PM4Py originally imported as strings. Pandas then keeps ``object``
+    # dtype even though the currently displayed values are numeric.
+    contains_numeric_values = source.dropna().map(
+        lambda value: isinstance(value, Number) and not isinstance(value, bool)
+    ).any()
+    if pd.api.types.is_numeric_dtype(source) or contains_numeric_values:
         filter_value = pd.to_numeric(filter_attribute, errors="coerce")
-        if pd.isna(filter_value):
-            return [False] * len(source)
-        mask = pd.to_numeric(source, errors="coerce") == filter_value
-        return mask.fillna(False).tolist()
+        if not pd.isna(filter_value):
+            mask = pd.to_numeric(source, errors="coerce") == filter_value
+            return mask.fillna(False).tolist()
+        # Mixed columns can also contain abstracted labels such as "*".
+        # Preserve literal matching when the selected filter is not numeric.
 
     filter_value = str(filter_attribute)
     return source.apply(
@@ -75,20 +82,6 @@ def build_dependency_graph(abstractions):
                 G.add_edge(abstraction_obj, other_obj)
 
 
-    pos = nx.spring_layout(G)
-
-    nx.draw(
-        G,
-        pos,
-        with_labels=True,
-        node_color="lightblue",
-        node_size=2000,
-        font_size=10,
-        arrows=True
-    )
-
-    #plt.show()
-
     if not nx.is_directed_acyclic_graph(G):
         logger.warning("The graph is not directed acyclic")
     layers = get_execution_layers(G)
@@ -110,7 +103,7 @@ def build_dependency_graph(abstractions):
                     keys_to_remove.append(key)
         for key in keys_to_remove:
             del cluster_requested[key]
-    print(cluster_order)
+    logger.debug("Abstraction execution order: %s", cluster_order)
     return cluster_order
 
 

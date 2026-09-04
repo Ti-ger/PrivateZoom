@@ -157,14 +157,28 @@ resetButton.addEventListener('click', () => {
 
 async function loadAvailableAbstractions() {
 
-  const response = await fetch("/api/available_abstractions");
+  const [response, attributes] = await Promise.all([
+    fetch("/api/available_abstractions"),
+    load_attributes(),
+  ]);
   const abstractions = await response.json();
+  const hasActivity = Object.prototype.hasOwnProperty.call(
+    attributes.eventAttributes,
+    "Activity",
+  );
 
   const container = document.getElementById("abstractions-container");
   container.innerHTML = "";
   ABSTRACTIONS.abstractions = [];
 
   Object.entries(abstractions).forEach(([type, options]) => {
+
+    if (hasActivity && type === "concept:name") {
+      // Keep the hidden column abstracted so removing its duplicate control
+      // does not expose values or alter privacy checks.
+      if (options[0]) ABSTRACTIONS.abstractions.push(options[0]);
+      return;
+    }
 
     const wrapper = document.createElement("div");
     wrapper.classList.add("slider-row");
@@ -205,7 +219,12 @@ async function loadAvailableAbstractions() {
 
 
     // Eventlistener
-    slider.addEventListener("input", async () => {
+    slider.addEventListener("input", () => {
+      valueLabel.textContent = prettifyAbstractionName(options[parseInt(slider.value, 10)]);
+    });
+    // Submit once when the user commits the slider position, rather than
+    // queuing a full log transformation for every intermediate position.
+    slider.addEventListener("change", async () => {
 
       const selectedIndex = parseInt(slider.value, 10);
       const selectedKey = options[selectedIndex];

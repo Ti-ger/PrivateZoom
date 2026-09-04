@@ -22,6 +22,7 @@ E-Mail: {firstname.lastname}@hu-berlin.de
 # Load and preprocess event data
 # app/backend/data_loader.py
 from pathlib import Path
+from functools import lru_cache
 
 import pandas as pd
 import pm4py
@@ -48,11 +49,32 @@ def load_event_log(filename: str, foldername="event_data") -> pd.DataFrame:
                          be in the folder 'data/processed_event_data'.")
     return df
 
-def load_event_log_from_tempfile(file_path: str) -> pd.DataFrame:
-    """Loads an event log from a temporary file path."""
+def load_xes_event_log(file_path: str):
+    """Parse XES while preserving separate event and trace attributes."""
     if not file_path.endswith(".xes"):
         raise ValueError("Only .xes files are supported.")
-    log = xes_importer.apply(file_path)
+    return xes_importer.apply(file_path)
+
+
+def event_log_to_dataframe(log) -> pd.DataFrame:
+    """Convert a parsed log; PM4Py also adds case attributes to its events."""
     df = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME)
     df = dataframe_utils.convert_timestamp_columns_in_df(df)
     return df
+
+
+def load_event_log_from_tempfile(file_path: str) -> pd.DataFrame:
+    """Loads an event log from a temporary file path."""
+    return event_log_to_dataframe(load_xes_event_log(file_path))
+
+
+@lru_cache(maxsize=1)
+def _cached_event_log(file_path, modified_ns, size):
+    return load_event_log_from_tempfile(file_path)
+
+
+def load_cached_event_log(file_path: str) -> pd.DataFrame:
+    """Cache the current source log, never the mutable abstraction result."""
+    path = Path(file_path).resolve()
+    stat = path.stat()
+    return _cached_event_log(str(path), stat.st_mtime_ns, stat.st_size).copy(deep=True)

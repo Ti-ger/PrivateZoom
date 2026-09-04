@@ -32,6 +32,14 @@ trace_attributes_types = defaultdict(set)
 event_attributes_types = defaultdict(set)
 
 
+def get_ui_attribute_mapping(mapping=None):
+    """Return attributes shown in the UI without duplicate activity columns."""
+    visible = dict(event_attribute_type_mapping if mapping is None else mapping)
+    if "Activity" in visible:
+        visible.pop("concept:name", None)
+    return visible
+
+
 
 def load_event_log(file_path):
     if not file_path.endswith(".xes"):
@@ -40,8 +48,9 @@ def load_event_log(file_path):
     return log
 
 
-def extract_attributes(file_path):
-    log = load_event_log(file_path)
+def extract_attributes(file_path, *, log=None):
+    if log is None:
+        log = load_event_log(file_path)
     for trace in log:
         trace_attributes.update(trace.attributes.keys())
         for trace_key, trace_value in trace.attributes.items():
@@ -100,7 +109,7 @@ def write_to_file():
     with open(f'{FILEPATH}/attributes.json', 'w') as outfile:
         json.dump({
             'eventAttributes':
-                {k: v.value for k, v in event_attribute_type_mapping.items()}
+                {k: v.value for k, v in get_ui_attribute_mapping().items()}
         },
             outfile,
             indent=2
