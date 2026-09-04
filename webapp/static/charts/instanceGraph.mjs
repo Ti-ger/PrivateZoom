@@ -28,6 +28,7 @@ import {getAccessors} from "../utils/parserGenerator.mjs";
 
 let tooltipDocumentClickHandler = null;
 let tooltipDocumentKeydownHandler = null;
+const HIDDEN_TOOLTIP_ATTRIBUTES = new Set(["case:concept:name"]);
 
 function normalizeCoordinate(value) {
     if (value instanceof Date) {
@@ -74,6 +75,7 @@ function buildTooltipHtml(eventsAtPoint, accessors) {
         html += `<div class="tooltip-entry-title">Event ${index + 1}</div>`;
 
         for (const [key, accessor] of Object.entries(accessors)) {
+            if (HIDDEN_TOOLTIP_ATTRIBUTES.has(key)) continue;
             html += `<div class="tooltip-row"><b>${escapeHtml(key)}:</b> ${formatTooltipValue(accessor(event))}</div>`;
         }
 
@@ -239,4 +241,4 @@ async function renderInstanceGraph(graphData, link, container, xAccessor, xScale
     ;
 }
 
-export { renderInstanceGraph };
+export { buildTooltipHtml, renderInstanceGraph };
