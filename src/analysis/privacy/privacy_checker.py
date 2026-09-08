@@ -120,7 +120,9 @@ def delete_trace(df, max_zoom_path, min_k_trace=-1, min_k_event=-1, min_k_edge=-
             for trace_hash, k_val in trace_k_map.items():
                 if k_val < min_k_trace:
                     trace_hashes.append(trace_hash)
-            filtered_trace_case_ids, log = delete_trace_by_hash(max_zoom_path, trace_hashes, log) and trace_privacy_reached
+            filtered_trace_case_ids, log = delete_trace_by_hash(
+                max_zoom_path, trace_hashes, log
+            )
             cases_to_delete = cases_to_delete.union(filtered_trace_case_ids)
             trace_privacy_reached = trace_privacy_reached and filtered_trace_case_ids== []
             if not trace_privacy_reached:
