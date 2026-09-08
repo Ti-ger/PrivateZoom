@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 def load_l_diversity_map(file_path):
     with open(file_path, 'r') as f:
-        return json.load(open(str(L_DIVERSITY_PATH), 'r'))
+        return json.load(f)
 
 
 def get_l_diversity(file_path:str, log=None):

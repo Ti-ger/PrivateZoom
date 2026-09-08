@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -11,6 +12,7 @@ from pm4py.objects.log.obj import Event, EventLog, Trace
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.analysis.privacy import privacy_checker
+from src.analysis.privacy import l_diversity
 
 
 class PrivacyMetricTests(unittest.TestCase):
@@ -43,6 +45,23 @@ class PrivacyMetricTests(unittest.TestCase):
                     "log.xes", k_trace=2, k_event=3, k_edge=2
                 )
             )
+
+
+class LDiversityLoaderTests(unittest.TestCase):
+    def test_loader_reads_the_supplied_mapping_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            requested_path = directory / "requested.json"
+            global_path = directory / "global.json"
+            requested_path.write_text(
+                '{"activity": {"*": ["a", "b"]}}', encoding="utf-8"
+            )
+            global_path.write_text('{"wrong": true}', encoding="utf-8")
+
+            with patch.object(l_diversity, "L_DIVERSITY_PATH", global_path):
+                result = l_diversity.load_l_diversity_map(requested_path)
+
+        self.assertEqual(result, {"activity": {"*": ["a", "b"]}})
 
 
 class PrivacyDeletionTests(unittest.TestCase):
