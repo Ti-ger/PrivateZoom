@@ -214,7 +214,7 @@ def delete_edge_by_hash(file_path:str, edge_hashes_to_delete, log=None):
     else:
         empty_df = get_dummy_df()
         pm4py.write_xes(empty_df, file_path) #
-    return filtered_case_ids, log
+    return filtered_case_ids, filtered_log
 
 def delete_trace_by_hash(file_path:str, trace_hashes, log=None):
     if log is None:
@@ -234,7 +234,7 @@ def delete_trace_by_hash(file_path:str, trace_hashes, log=None):
     else:
         empty_df = get_dummy_df()
         pm4py.write_xes(empty_df, file_path) #
-    return filtered_case_ids, log
+    return filtered_case_ids, filtered_log
 
 def filter_eventlog_by_cases(log, cases_to_remove):
     filtered_traces = [

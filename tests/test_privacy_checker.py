@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 
 import pandas as pd
+from pm4py.objects.log.obj import Event, EventLog, Trace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -77,6 +78,48 @@ class PrivacyDeletionTests(unittest.TestCase):
             )
 
         self.assertEqual(result["case:concept:name"].tolist(), ["case-2"])
+
+    def test_edge_deletion_returns_the_filtered_log(self):
+        first = Trace(
+            [Event({"concept:name": "a"}), Event({"concept:name": "b"})],
+            attributes={"concept:name": "case-1"},
+        )
+        second = Trace(
+            [Event({"concept:name": "a"}), Event({"concept:name": "c"})],
+            attributes={"concept:name": "case-2"},
+        )
+        log = EventLog([first, second])
+        edge_hash = (hash(first[0]), hash(first[1]))
+
+        with patch.object(privacy_checker.pm4py, "write_xes"):
+            deleted, filtered = privacy_checker.delete_edge_by_hash(
+                "log.xes", [edge_hash], log
+            )
+
+        self.assertEqual(deleted, ["case-1"])
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(filtered[0].attributes["concept:name"], "case-2")
+
+    def test_trace_deletion_returns_the_filtered_log(self):
+        first = Trace(
+            [Event({"concept:name": "a"})],
+            attributes={"concept:name": "case-1"},
+        )
+        second = Trace(
+            [Event({"concept:name": "b"})],
+            attributes={"concept:name": "case-2"},
+        )
+        log = EventLog([first, second])
+        trace_hash = hash(privacy_checker.trace_to_tuple(first))
+
+        with patch.object(privacy_checker.pm4py, "write_xes"):
+            deleted, filtered = privacy_checker.delete_trace_by_hash(
+                "log.xes", [trace_hash], log
+            )
+
+        self.assertEqual(deleted, ["case-1"])
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(filtered[0].attributes["concept:name"], "case-2")
 
 
 if __name__ == "__main__":
