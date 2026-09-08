@@ -100,6 +100,44 @@ class PrivacyDeletionTests(unittest.TestCase):
         self.assertEqual(len(filtered), 1)
         self.assertEqual(filtered[0].attributes["concept:name"], "case-2")
 
+    def test_follow_event_l_diversity_receives_path_and_current_log(self):
+        frame = pd.DataFrame(
+            {
+                "case:concept:name": ["case-1"],
+                "concept:name": ["a"],
+            }
+        )
+        current_log = object()
+
+        with (
+            patch.object(
+                privacy_checker, "load_event_log", return_value=current_log
+            ),
+            patch.object(privacy_checker, "check_empty_log", return_value=False),
+            patch.object(
+                privacy_checker,
+                "get_k_anonymity",
+                return_value=({}, {}, {}),
+            ),
+            patch.object(
+                privacy_checker, "get_l_diversity", return_value={}
+            ) as get_l_diversity,
+            patch.object(
+                privacy_checker,
+                "delete_event_by_hash",
+                return_value=([], current_log),
+            ),
+            patch.object(privacy_checker.max_zoom, "export_max_zoom_df"),
+        ):
+            privacy_checker.delete_trace(
+                frame,
+                "log.xes",
+                l_div=2,
+                follow_event_l_div=True,
+            )
+
+        get_l_diversity.assert_called_once_with("log.xes", current_log)
+
     def test_trace_deletion_returns_the_filtered_log(self):
         first = Trace(
             [Event({"concept:name": "a"})],

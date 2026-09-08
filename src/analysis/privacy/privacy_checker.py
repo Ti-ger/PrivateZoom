@@ -148,7 +148,9 @@ def delete_trace(df, max_zoom_path, min_k_trace=-1, min_k_event=-1, min_k_edge=-
             if follow_event_l_div:
                 follow_event_l_div_reached = True
                 follow_l_div_event_hashes = []
-                l_div_counts = calc_l_div(get_l_diversity(load_event_log(max_zoom_path)))
+                l_div_counts = calc_l_div(
+                    get_l_diversity(max_zoom_path, log)
+                )
                 print(l_div_counts)
                 for event_hash, l_div_values in l_div_counts.items():
                     for _, l_div_val in l_div_values.items():
