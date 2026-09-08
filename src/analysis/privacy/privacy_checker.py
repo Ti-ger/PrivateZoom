@@ -32,10 +32,10 @@ def check_metrics(xes_path, k_trace=-1, k_event=-1, k_edge=-1, l_div=-1, single_
         for k_trace_value in trace_count_map.values():
             if k_trace_value < k_trace:
                 return False
-        for k_event_value in edge_count_map.values():
+        for k_event_value in event_count_map.values():
             if k_event_value < k_event:
                 return False
-        for k_edge_value in event_count_map.values():
+        for k_edge_value in edge_count_map.values():
             if k_edge_value < k_edge:
                 return False
     else:
