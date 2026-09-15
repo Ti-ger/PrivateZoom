@@ -1,6 +1,6 @@
-# SEMANTIC_ZOOM
+# Private Zoom
 
-**SEMANTIC_ZOOM** is a web application built with [Python Flask](https://flask.palletsprojects.com/en/stable/) and the JavaScript library [D3.js](https://d3js.org) for visualizing event logs while preserving privacy constraints.
+**Private Zoom** is a web application built with [Python Flask](https://flask.palletsprojects.com/en/stable/) and the JavaScript library [D3.js](https://d3js.org) for visualizing event logs while preserving privacy constraints.
 
 Privacy is achieved by abstracting the attributes of events in the event log. Events that originally had different attribute values can be generalized to a shared, abstracted value. This allows the transformed event log to satisfy constraints such as *k-anonymity* and *l-diversity*, reducing the risk of re-identification.
 
@@ -11,8 +11,8 @@ Users can express their interests in specific parts of the event log. If the def
 ## Installation
 1. Clone the project
 ```
-git clone git@github.com:ColsR/SEMANTIC_ZOOM.git
-cd SEMANTIC_ZOOM
+git clone https://github.com/Ti-ger/PrivateZoom.git
+cd PrivateZoom
 ```
 2. Create a new virtual environment and activate the virtual environemnt
 ```
@@ -72,7 +72,8 @@ Events which have for the *Source Column* the *Filter Value* will abstract their
 
 
 
-Some logs recommended are: 
+Some logs recommended are:
+
 * Sepsis cases: https://doi.org/10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460
 * Road traffic fine management process: https://doi.org/10.4121/uuid:270fd440-1057-4fb9-89a9-b699b47990f5
 
@@ -209,3 +210,8 @@ Please consider adapting the `project_root` variable.
 ## Licences and dependencies
 
 This project is distributed under the AGPLv3. It makes use of third-party Python and JavaScript packages, whose licenses are provided in the `LICENCES_thirdparty/` directory.
+
+## Acknowledgements
+The code in this repository is based on:
+SEMANTIC_ZOOM : https://github.com/ColsR/SEMANTIC_ZOOM
+SEAMLESS_ZOOM : https://github.com/rubenssohn/SEAMLESS_ZOOM
